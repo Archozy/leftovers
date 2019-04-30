@@ -11,6 +11,33 @@
 #include <fcntl.h>
 #include <signal.h>
 
+void cut(char* input, char** k,int* nbarg){
+	int l = strlen(input);
+	int y = 0;
+	*nbarg = 0;
+	int j = 0;
+	char tmp[100];
+	memset(tmp, 0, 100);
+	for(int i = 0 ; i < l ; i++){
+		if(input[i] == ' ' || input[i] == '\0' || input[i] == 0 || input[i] == '\n'){
+			printf("\n");
+			printf("%s \n", tmp);
+			strcpy(*(k + y), tmp);
+			printf("%s \n", k[y]);
+			y++;
+			j=0;
+			memset(tmp, 0, 100);
+			*nbarg = *nbarg + 1;
+		}
+		else{
+			tmp[j] = input[i];
+			printf("%d ---> |%c| \n",tmp[j], tmp[j]);
+			j++;
+		}
+	}
+}
+
+
 void analyse(){
 	int sockfd = 0;
     char recvBuff[1024];
@@ -110,6 +137,9 @@ void sentence(char* input, int* sockfd){
 						memset(current, 0, 40);
 						hoeing++;
 						y = 0;
+						if(input[i] == '\0'){
+							break;
+						}
 						continue;
 					}
 					if(hoeing == 1){
@@ -117,6 +147,9 @@ void sentence(char* input, int* sockfd){
 						memset(current, 0, 40);
 						hoeing++;
 						y = 0;
+						if(input[i] == '\0'){
+							break;
+						}
 						continue;
 					}
 					if(hoeing == 2){
@@ -132,8 +165,17 @@ void sentence(char* input, int* sockfd){
 					y++;
 				}
 			}
-			printf("Connection as : %s on %s port : %s \n", usrname, adr, port);
-			connectionServer(sockfd, adr, atoi(port), usrname);
+			int a;
+			if(hoeing == 3){
+				printf("Connection as : %s on %s port : %s \n", usrname, adr, port);
+				if(a = connectionServer(sockfd, adr, atoi(port), usrname) == -1){
+					printf("Check if the adresse/port is good\n");
+				}
+			}
+			else{
+				printf("Usage: /connect <ip of server> <port> <Username> \n");
+			}
+			
 
 		}
 	}
@@ -145,16 +187,39 @@ void sentence(char* input, int* sockfd){
 	}
 }
 
+int recvMSG(int *sockfd){
+	char rec[1024];
+	int y;
+	if((y = recv(*sockfd, rec, 1024, 0)) > 0){
+		printf("%s\n", rec);
+	}
+}
+
 int main()
 {
 	int sockfd;
 	char t[200];
 	//connectionServer(&sockfd, "127.0.0.1", 5000, "Archoline");
-	while(1){
+	/*while(1){
 		memset(t, '0', 200);
 		fgets(t, 200, stdin);
 		sentence(t, &sockfd);
 
+	}*/
+	char* p[100];
+	int y = 0;
+	char u[50];
+	memset(u, 0, 50);
+	fgets(u, 20, stdin);
+	char m[50][10];
+	for(int i = 0 ; i < 10 ; i++){
+		memset(m[i], 0, 50);
 	}
+	
+	cut(u,m, &y);
+	for(int i = 0 ; i < 2 ; i++){
+		//printf("%s",m[i]);
+	}
+	printf("%d\n", y);
     
 }

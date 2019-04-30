@@ -11,10 +11,58 @@
 #include <fcntl.h>
 #include <signal.h>
 
-int main(int argc, char *argv[])
+void encrypt(char password[],int key)
 {
-
-    
-
-    return 0;
+    char ch;
+	int i;
+	
+	for(i = 0; password[i] != '\0'; ++i){
+		ch = password[i];
+		
+		if(ch >= 'a' && ch <= 'z'){
+			ch = ch + key;
+			
+			if(ch > 'z'){
+				ch = ch - 'z' + 'a' - 1;
+			}
+			
+			password[i] = ch;
+		}
+		else if(ch >= 'A' && ch <= 'Z'){
+			ch = ch + key;
+			
+			if(ch > 'Z'){
+				ch = ch - 'Z' + 'A' - 1;
+			}
+			
+			password[i] = ch;
+		}
+	}
+}
+void decrypt(char password[],int key)
+{
+    	char ch;
+	int i, key;
+	for(i = 0; password[i] != '\0'; ++i){
+		ch = password[i];
+		
+		if(ch >= 'a' && ch <= 'z'){
+			ch = ch - key;
+			
+			if(ch < 'a'){
+				ch = ch + 'z' - 'a' + 1;
+			}
+			
+			password[i] = ch;
+		}
+		else if(ch >= 'A' && ch <= 'Z'){
+			ch = ch - key;
+			
+			if(ch > 'a'){
+				ch = ch + 'Z' - 'A' + 1;
+			}
+			
+			password[i] = ch;
+		}
+	}
 }

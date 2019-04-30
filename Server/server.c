@@ -9,9 +9,23 @@
 #include <sys/types.h>
 #include <time.h> 
 #include <fcntl.h>
-
+#include <dirent.h>
+#include <errno.h>
+#include <unistd.h>
 #include <mysql/mysql.h>
-
+#include <signal.h>
+#include <fcntl.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <arpa/inet.h>
+#include <string.h>
+#include <sys/select.h>
+#include <sys/time.h>
+#define MAX_BUF 1024
+int count = 0; 
 struct vector{
 	int size;
 	struct client* data;
@@ -68,13 +82,72 @@ void vector_print(struct vector* vect){
 	}
 }
 
+int direxist(char* usr){
+	
+	
+	char tui[50];
+	memset(tui, 0, 50);
+	if(usr[0] < 10){
+		for(int i = 1 ; usr[i] != '\0' ; i++){
+			tui[i - 1] = usr[i];
+		}
+	}
+	else{
+		strcpy(tui, usr);
+	}
+	for(int i = 0 ; tui[i] != '\0' ; i++){
+		printf("|%d|", tui[i]);
+	}
+	DIR* dir = opendir(tui);
+	if (dir)
+	{
+		/* Directory exists. */
+		printf("ALready exists \n");
+		closedir(dir);
+	}
+	else if (ENOENT == errno)
+	{
+		/* Directory does not exist. */
+		printf("Creating a directory for %s\n", tui);
+		mkdir(tui, 0777);
+	}
+	else
+	{
+		/* opendir() failed for some other reason. */
+		printf("Error Dir \n");
+	}
+}
 
+int recvPic(int *new_sock){
+	//Read Picture Size
+	printf("Reading Picture Size\n");
+	int size = 0;
+	int bs[1];
+	printf("Reading Picture Size\n");
+	int y = recv(*new_sock, bs, 1, 0);
+	if(y < 0){
+		printf("Crashed");
+		exit(0);
+	}
+	printf("Size %d\n", size);
+	//Read Picture Byte Array
+	printf("Reading Picture Byte Array\n");
+	char p_array[size];
+	read(*new_sock, p_array, size);
+
+	//Convert it Back into Picture
+	printf("Converting Byte Array to Picture\n");
+	FILE *image;
+	image = fopen("c1.png", "w");
+	fwrite(p_array, 1, sizeof(p_array), image);
+	fclose(image);
+}
 int main(int argc, char *argv[])
 {
 	
     int listenfd = 0, connfd = 0;
     struct sockaddr_in serv_addr; 
-
+	
     //int j = sprintf(sendBuff, "Test Message Server \n");ù
 	printf("Server Launched Port : %s \n", argv[1]);
     listenfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -121,7 +194,7 @@ int main(int argc, char *argv[])
 			//fcntl(vect.data[vect.size - 1].connfd, F_SETFL, SOCK_NONBLOCK);
 			for(int i = 0; i < vect.size ; i++){
 				if(vect.data[i].connfd == connfd){
-					printf("---> YOU (%s): connected\n", vect.data[i].username);
+					printf("---> YOU (cute) (%s): connected\n", vect.data[i].username);
 				}else{
 					printf("---> %s : connected\n", vect.data[i].username);
 				}
@@ -138,6 +211,10 @@ int main(int argc, char *argv[])
 					for(int j = 0 ; j < 1024 ; j++){
 						vect.data[i].username[j] = buf[j];
 						if(buf[j] == '\0'){
+							char chem[50];
+							//strcat(chem, "User/");
+							strcat(chem, buf);
+							direxist(chem);
 							break;
 						}
 						
@@ -147,28 +224,187 @@ int main(int argc, char *argv[])
 					memset(buf, '0', 1024);
 				}
 				else{
+					if(buf[0] == '/' && buf[1] == '9'){
+						printf("How a picture Nice \n");
+						
+						printf("%s is sending a file ...\n", vect.data[i].username);
+						//Read Picture Size
+						
+						
+						char ts[50];
+						char name[50];
+						memset(ts, 0, 50);
+						memset(name, 0, 50);
+						int change = 0;
+						int cle = 0;
+						printf("Why does it take so much times \n");
+						int ofs = 0;
+						for(int y = 2 ; buf[y] != '#' ; y++){
+							if(change == 0 && buf[y] != '|'){
+								ts[y - 2] = buf[y];			
+							}
+							if(change == 1){
+								name[y - cle] = buf[y];					
+							}
+							if(buf[y] == '|'){
+								change++;
+								cle = y+1;
+							}
+							ofs = y;
+							
+						}
+						
+						int size = atoi(ts);
+						printf("Size : %s \n", ts);
+						printf("Size : %d \n", size);
+						printf("Reading Picture Size\n");
+						char buff[1024];
+						memset(buff, 0, 1024);
+						strcat(buff, vect.data[i].username);
+						strcat(buff, "/");
+						strcat(buff, name);
+						
+
+						//Read Picture Byte Array
+						printf("Reading Picture Byte Array\n");
+						char p_array[size];
+						read(vect.data[i].connfd, p_array, size);
+
+						//Convert it Back into Picture
+						printf("Converting Byte Array to Picture\n");
+						FILE *image;
+						printf("%s\n", buff);
+						image = fopen(buff, "w");
+						if(image == NULL){
+							printf("BUG");
+						}
+						else{
+							fwrite(p_array, 1, sizeof(p_array), image);
+							7fclose(image);
+						}
+						
+						
+					}
 					
-					char* lop = malloc(sizeof(char) * 1075);
-					snprintf(lop,1050, "[%s]: %s\n", vect.data[i].username, buf);
-					printf("%s", lop);
-					for(int k = 0; k < vect.size ; k++){
-						if(vect.data[k].connfd != vect.data[i].connfd){
-							int u = send(vect.data[k].connfd, lop, 1075, NULL);
+					if(buf[0] == '/' && buf[1] == '8'){
+						printf("AWWW a file......Nice \n");
+
+						
+						long size = 0;
+						
+						printf("%s is sending a file ...\n", vect.data[i].username);
+						//Read Picture Size
+						
+						
+						char ts[50];
+						char name[50];
+						memset(ts, 0, 50);
+						memset(name, 0, 50);
+						int change = 0;
+						int cle = 0;
+						printf("Why does it take so much times \n");
+						int ofs = 0;
+						for(int y = 2 ; buf[y] != '#' ; y++){
+							if(change == 0 && buf[y] != '|'){
+								ts[y - 2] = buf[y];			
+							}
+							if(change == 1){
+								name[y - cle] = buf[y];					
+							}
+							if(buf[y] == '|'){
+								change++;
+								cle = y+1;
+							}
+							ofs = y;
+							
+						}
+						size = atoi(ts);
+						printf("Size : %s \n", ts);
+						printf("Size : %d \n", size);
+						char p_array[size];
+						memset(p_array, 0, size);
+						for(int y = ofs + 2 ; buf[y] != '\0' ; y++ ){
+							p_array[y - (ofs + 2)] = buf[y];
+						}
+						printf("file : \n %s \n", p_array);
+						char buff[1024];
+						int b = 0;
+						int tot;
+						memset(buff, 0, 1024);
+						size = atoi(ts);
+						
+						char pou[70];
+						
+						FILE *image = NULL;
+						printf("%s is sending a file ...\n", vect.data[i].username);
+						strcat(buff, vect.data[i].username);
+						strcat(buff, "/");
+						strcat(buff, name);
+						
+					
+						printf("%s\n", buff);
+						image = fopen(buff, "w");
+						if(image == NULL){
+							printf("ERROR \n");
+							
+						}
+						fprintf(image, "%s", p_array);
+						printf("File successfully Received!\n");
+						fclose(image);
+						
+					}
+					
+					
+					
+					
+					if(buf[0] == '/' && buf[1] == '2'){
+						char connected[1024];
+						memset(connected, 0, 1024);
+						strcat(connected, "/2");
+						for(int j = 0 ; j < vect.size ; j++){
+							
+							strcat(connected,vect.data[j].username);
+							strcat(connected, "\n");
+						}
+						int u = send(vect.data[i].connfd, connected, 1024, NULL);
+						if(u < 0){
+							printf("Error\n");
+						}
+					}
+					if(buf[0] == '/' && buf[1] == '1'){
+						
+						printf("Message client reçus \n");
+						char* lop = malloc(sizeof(char) * 1075);
+						char tuf[1024];
+						memset(tuf, 0, 1024);
+						for(int i = 2 ; i < strlen(buf) ; i++){
+							tuf[i - 2] = buf[i];
+						}
+						snprintf(lop,1050, "[%s]:%s\n", vect.data[i].username, tuf);
+						printf("%s", lop);
+						for(int k = 0; k < vect.size ; k++){
+							memset(tuf, 0, 1024);
+							strcat(tuf, "/1");
+							strcat(tuf, lop);
+							int u = send(vect.data[k].connfd, tuf, 1024, NULL);
 							if(u < 0){
 								printf("Error\n");
 							}
+							
 						}
+						free(lop);
+						memset(buf, '0', 1024);
 					}
-					free(lop);
-					memset(buf, '0', 1024);
+					
+					
 				}
 				
 			}
 			if(y == 0){
 				printf("deconnexion from %s\n", vect.data[i].username);
 				
-				shutdown(vect.data[i].connfd, 2);
-				//client_free(&vect.data[i]);
+				close(vect.data[i].connfd);
+				client_free(&vect.data[i]);
 				vector_remove(&vect, i);
 			}
 			memset(buf, '0', 1024);

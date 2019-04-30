@@ -1,20 +1,29 @@
-CC=gcc 
-CFLAGS=-Wall -Wextra -std=c99 -O0 -g `pkg-config --cflags gtk+-3.0 --libs gtk+-3.0` -I.
+CC = gcc 
+CFLAGS = `pkg-config --cflags gtk+-3.0` -Wall -Wextra -std=c99 -o main -g `pkg-config --libs gtk+-3.0`
 
-APP=./main_gui
+APP=./main
 
 ODIR=build
 
-DEPS = img_edit_gui.h
+DEPS = img_edit_gui.h encryption.h client.h ImageEditing/image_edit.h sharedBrowser/shared_browser.h
 
-_OBJ = img_edit_gui.o main_gui.o 
+_OBJ = shared_browser.o img_edit_gui.o encryption.o client.o main_gui.o 
 OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
 
-$(ODIR)/%.o: %.c $(DEPS)
-	$(CC) -c -o $@ $< $(CFLAGS)
+#main_gui : $(OBJ) build/image_edit.o build
+#	echo done
 
-build: $(OBJ)
+build: $(OBJ) $(ODIR)/image_edit.o
 	$(CC) -o $(APP) $^ $(CFLAGS)
+
+$(ODIR)/shared_browser.o: sharedBrowser/shared_browser.c $(DEPS)
+	$(CC) -c $< $(CFLAGS) -o $@
+
+$(ODIR)/image_edit.o: ImageEditing/image_edit.c $(DEPS)
+	$(CC) -c $< $(CFLAGS) -o $@
+
+$(ODIR)/%.o: %.c $(DEPS)
+	$(CC) -c $< $(CFLAGS) -o $@ 
 
 run: $(OBJ) build
 	$(APP)
