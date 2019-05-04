@@ -19,6 +19,22 @@ void recieved_text (gchar *m) {
 	gtk_text_buffer_insert(chatBuf, &e, "\n", 1);
 } 
 
+gboolean on_enter_accept (GtkWidget *widget, GdkEventKey *event, GtkWidget *dialog) {
+	switch (event->keyval) {
+		case GDK_KEY_Return: 
+	    	if (!(event->state & GDK_SHIFT_MASK)) {	
+				gtk_dialog_response(GTK_DIALOG(dialog), GTK_RESPONSE_ACCEPT);
+				return TRUE; 
+			}
+			break;
+
+		default:
+			return FALSE; 
+	}
+
+	return FALSE;
+}
+
 static void on_open_image (GtkButton* button) {	
 	if (!connected) {
 		recieved_text("You are not connected to a server...");
@@ -67,7 +83,8 @@ static void on_send_text (GtkButton* button __attribute__((unused)), GtkWidget *
 	// | it takes gchar * as an argument, edit it however you want, 
 	// V the result will then be shown in the main window (appended at the end)
 	
-	sentence(message, &sockfd);
+	if (strlen(message) != 0)
+		sentence(message, &sockfd);
 	
 
 	/*GtkTextBuffer *chatBuf = gtk_text_view_get_buffer(GTK_TEXT_VIEW(textFields[1]));
@@ -125,6 +142,8 @@ static void on_connect(GtkButton* connectBtn, GtkWidget *name) {
 	gtk_grid_attach(GTK_GRID(grid), portText, 1, 1, 1, 1);
 	gtk_grid_attach(GTK_GRID(grid), userText, 1, 2, 1, 1);
 
+	g_signal_connect(G_OBJECT (dialog), "key_press_event", G_CALLBACK (on_enter_accept), dialog);
+
 	gtk_container_set_border_width(GTK_CONTAINER(grid), 10);
 	gtk_container_add(GTK_CONTAINER(content), grid);
 	gtk_widget_show_all (content);
@@ -159,6 +178,178 @@ static void on_connect(GtkButton* connectBtn, GtkWidget *name) {
 
 	gtk_widget_destroy (dialog);
 }  
+
+void on_end_call(GtkButton *button, GtkWidget *window) {
+	gtk_widget_destroy(window);
+}
+
+static void call(gchar* name) {
+	GtkWidget * call_window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+	gtk_window_set_position(GTK_WINDOW(call_window), GTK_WIN_POS_CENTER);
+	gtk_widget_set_size_request (call_window, 300, 300);
+
+	gtk_window_set_title(GTK_WINDOW(call_window), "Voice chat");
+
+	GtkWidget * mainBox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
+
+	GtkWidget * header = gtk_header_bar_new();
+	gchar name_text[150];
+	sprintf(name_text, "<big>%s</big>", name);
+	GtkWidget *name_label = gtk_label_new(name_text);
+	gtk_label_set_use_markup(GTK_LABEL(name_label), TRUE);
+	gtk_header_bar_set_custom_title(GTK_HEADER_BAR(header), name_label);
+
+	gtk_box_pack_start(GTK_BOX(mainBox), header, FALSE, FALSE, 0);
+
+
+	GtkWidget *grid = gtk_grid_new();
+	gtk_grid_set_column_spacing (GTK_GRID(grid), 50);
+	gtk_grid_set_row_spacing(GTK_GRID(grid), 200);
+
+	GtkWidget *box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
+	GtkWidget *volumeLabel = gtk_label_new("Volume:");
+	GtkWidget *volumeScale = gtk_scale_new_with_range(GTK_ORIENTATION_VERTICAL,
+	                                            0, 100, 10);
+	gtk_scale_set_value_pos(GTK_SCALE(volumeScale),GTK_POS_LEFT);
+	gtk_range_set_inverted(GTK_RANGE(volumeScale), TRUE);
+	gtk_range_set_value(GTK_RANGE(volumeScale), 50);
+	gtk_widget_set_size_request(volumeScale, 20, 200);
+	gtk_widget_set_vexpand (volumeScale, TRUE);
+	gtk_box_pack_start(GTK_BOX(box), volumeLabel, FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(box), volumeScale, TRUE, TRUE, 0);
+	gtk_widget_set_vexpand (box, TRUE);
+
+	gtk_grid_attach(GTK_GRID(grid), box, 0, 0, 1, 2);
+
+	GtkWidget *status = gtk_label_new("Connection in progress...");
+	gtk_widget_set_hexpand (status, TRUE);
+	gtk_grid_attach(GTK_GRID(grid), status, 1, 0, 1, 1);
+	GtkWidget *end_btn = gtk_button_new_with_label("End Chat");
+	gtk_widget_set_halign(end_btn, GTK_ALIGN_END);
+	gtk_widget_set_vexpand (end_btn, FALSE);
+	gtk_grid_attach(GTK_GRID(grid), end_btn, 1, 1, 1, 1);
+
+	gtk_container_set_border_width(GTK_CONTAINER(grid), 20);
+	gtk_widget_set_valign(grid, GTK_ALIGN_START);
+	gtk_box_pack_start(GTK_BOX(mainBox), grid, FALSE, TRUE, 0);
+	gtk_container_add(GTK_CONTAINER(call_window), mainBox);
+
+	g_signal_connect(end_btn, "clicked", G_CALLBACK (on_end_call), call_window);
+
+	gtk_widget_show_all(call_window);
+}
+
+static void incoming_call(gchar* name) {
+	GtkWidget *window = gtk_widget_get_toplevel (GTK_WIDGET (chat));
+	GtkWidget *dialog;
+	GtkDialogFlags flags = GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT;
+	dialog = gtk_dialog_new_with_buttons ("Voice chat request",
+	                                      GTK_WINDOW(window),
+	                                      flags,
+	                                      "_Answer", GTK_RESPONSE_ACCEPT,
+	                                      "_Decline", GTK_RESPONSE_REJECT,
+	                                      NULL);
+	GtkWidget *content = gtk_dialog_get_content_area (GTK_DIALOG (dialog));
+	GtkWidget *grid;
+	grid = gtk_grid_new();
+	gtk_grid_set_column_spacing (GTK_GRID(grid), 5);
+	gtk_grid_set_row_spacing(GTK_GRID(grid), 5);
+
+	GtkWidget *prompt;
+
+	prompt = gtk_label_new("placeholder");
+	gchar prompt_label[150];
+	sprintf(prompt_label, "<big>%s is calling...</big>", name);
+	gtk_label_set_text(GTK_LABEL(prompt), prompt_label);
+	gtk_label_set_use_markup(GTK_LABEL(prompt), TRUE);
+
+	gtk_grid_attach(GTK_GRID(grid), prompt, 0, 0, 1, 1);
+ 	g_signal_connect(G_OBJECT (dialog), "key_press_event", G_CALLBACK (on_enter_accept), dialog);
+
+	gtk_container_set_border_width(GTK_CONTAINER(grid), 10);
+	gtk_container_add(GTK_CONTAINER(content), grid);
+	gtk_widget_show_all (content);
+
+	if (gtk_dialog_run (GTK_DIALOG (dialog)) != GTK_RESPONSE_ACCEPT) {
+		gtk_widget_destroy (dialog);
+		g_message("Declined voice call with %s", name);
+		return;
+	}
+
+	gtk_widget_destroy (dialog);
+
+	g_message("Accepted voice call with %s", name);
+
+	call(name);
+}  
+
+
+void on_call(GtkButton *button, gpointer *data) {
+	GtkWidget *window = gtk_widget_get_toplevel (GTK_WIDGET (button));
+	GtkWidget *dialog;
+	GtkDialogFlags flags = GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT;
+	dialog = gtk_dialog_new_with_buttons ("Voice call",
+	                                      GTK_WINDOW(window),
+	                                      flags,
+	                                      "_Call", GTK_RESPONSE_ACCEPT,
+	                                      "_Close", GTK_RESPONSE_REJECT,
+	                                      NULL);
+	GtkWidget *content = gtk_dialog_get_content_area (GTK_DIALOG (dialog));
+	GtkWidget *grid;
+	grid = gtk_grid_new();
+	gtk_grid_set_column_spacing (GTK_GRID(grid), 5);
+	gtk_grid_set_row_spacing(GTK_GRID(grid), 5);
+
+	GtkWidget *prompt;
+	GtkWidget *textView;
+
+	prompt = gtk_label_new("Name:");
+	gtk_widget_set_halign(prompt, GTK_ALIGN_START);
+	gtk_grid_attach(GTK_GRID(grid), prompt, 0, 0, 1, 1);
+	textView = gtk_text_view_new();
+	gtk_widget_set_hexpand(textView, TRUE);
+	gtk_grid_attach(GTK_GRID(grid), textView, 0, 1, 1, 1);
+
+	gtk_container_set_border_width(GTK_CONTAINER(grid), 10);
+	gtk_container_add(GTK_CONTAINER(content), grid);
+
+ 	g_signal_connect(G_OBJECT (dialog), "key_press_event", G_CALLBACK (on_enter_accept), dialog);
+
+	gtk_widget_show_all (content);
+
+	if (gtk_dialog_run (GTK_DIALOG (dialog)) != GTK_RESPONSE_ACCEPT) {
+		gtk_widget_destroy (dialog);
+		return;
+	}
+
+	GtkTextBuffer *messageBuf = gtk_text_view_get_buffer(GTK_TEXT_VIEW(textView));
+	
+	GtkTextIter s, e;
+	gtk_text_buffer_get_bounds(messageBuf, &s, &e);
+	gchar *name = gtk_text_buffer_get_text(messageBuf, &s, &e, FALSE);
+
+	gtk_widget_destroy (dialog);
+
+	g_message("Called %s", name);
+
+	call(name);
+}
+
+gboolean on_key_press (GtkWidget *widget, GdkEventKey *event, GtkWidget *button) {
+	switch (event->keyval) {
+		case GDK_KEY_Return: 
+	    	if (!(event->state & GDK_SHIFT_MASK)) {	
+				g_signal_emit_by_name(button, "clicked");
+				return TRUE; 
+			}
+			break;
+
+		default:
+			return FALSE; 
+	}
+
+  return FALSE; 
+}
   
 int MSG(){
 	char rec[1024];
@@ -242,6 +433,7 @@ int main (int argc, char *argv[]) {
 	GtkWidget *sendBtn;
 	GtkWidget *connectBtn;
 	GtkWidget *imgBtn;
+	GtkWidget *callBtn;
 
 	connected = FALSE;
 
@@ -264,7 +456,10 @@ int main (int argc, char *argv[]) {
 	gtk_widget_set_size_request(connectBtn, 70, 30);
 	imgBtn = gtk_button_new_with_label("Send an image");
 	gtk_widget_set_size_request(imgBtn, 70, 30);
+	callBtn = gtk_button_new_with_label("Call someone");
+	gtk_widget_set_size_request(callBtn, 70, 30);
 	gtk_header_bar_pack_end(GTK_HEADER_BAR(header), imgBtn);
+	gtk_header_bar_pack_end(GTK_HEADER_BAR(header), callBtn);
 	gtk_header_bar_pack_start(GTK_HEADER_BAR(header), connectBtn);
 
 	gtk_box_pack_start(GTK_BOX(mainBox), header, FALSE, FALSE, 0);
@@ -330,6 +525,8 @@ int main (int argc, char *argv[]) {
 	g_signal_connect(imgBtn, "clicked", G_CALLBACK (on_open_image), NULL);
 	g_signal_connect(sendBtn, "clicked", G_CALLBACK (on_send_text), textFields);
 	g_signal_connect(connectBtn, "clicked", G_CALLBACK (on_connect), name);
+	g_signal_connect(callBtn, "clicked", G_CALLBACK (on_call), NULL);
+ 	g_signal_connect(G_OBJECT (window), "key_press_event", G_CALLBACK (on_key_press), sendBtn);
 
 	//g_signal_connect(G_OBJECT(window), "destroy", G_CALLBACK(gtk_main_quit), G_OBJECT(window));
 	gboolean runtime = TRUE;
