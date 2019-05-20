@@ -20,7 +20,7 @@ void recieved_text (gchar *m) {
 	gtk_text_buffer_insert(chatBuf, &e, "\n", 1);
 } 
 
-gboolean on_enter_accept (GtkWidget *widget, GdkEventKey *event, GtkWidget *dialog) {
+gboolean on_enter_accept (GtkWidget *widget __attribute__((unused)), GdkEventKey *event, GtkWidget *dialog) {
 	switch (event->keyval) {
 		case GDK_KEY_Return: 
 	    	if (!(event->state & GDK_SHIFT_MASK)) {	
@@ -180,15 +180,21 @@ static void on_connect(GtkButton* connectBtn, GtkWidget *name) {
 	gtk_widget_destroy (dialog);
 }  
 
-void on_end_call(GtkButton *button, GtkWidget *window) {
+void on_end_call(GtkButton *button __attribute__((unused)), GtkWidget *window) {
 	gtk_widget_destroy(window);
+}
+
+void *thread_wrapper(void *args) {
+	int *retval = malloc(sizeof(int));
+	*retval = system((const char *)args);
+	return (void*)retval;
 }
 
 static void call(gchar* name) {
 	pthread_t tidp;
-	char runstring[256];
-	sprintf(runstring, "python Vocal/gui.py %s", name);
-	pthread_create(&tidp, NULL, system, runstring);
+	char *runstring = malloc(sizeof(char)*256);
+	sprintf(runstring, "python Vocal/gui.py \"%s\"", name);
+	pthread_create(&tidp, NULL, thread_wrapper, (void *)runstring);
 
 	/*
 	GtkWidget * call_window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
@@ -292,7 +298,7 @@ static void incoming_call(gchar* name) {
 }  
 
 
-void on_call(GtkButton *button, gpointer *data) {
+void on_call(GtkButton *button, gpointer *data __attribute__((unused))) {
 	GtkWidget *window = gtk_widget_get_toplevel (GTK_WIDGET (button));
 	GtkWidget *dialog;
 	GtkDialogFlags flags = GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT;
@@ -347,7 +353,7 @@ void on_call(GtkButton *button, gpointer *data) {
 	}
 }
 
-gboolean on_key_press (GtkWidget *widget, GdkEventKey *event, GtkWidget *buttons[3]) {
+gboolean on_key_press (GtkWidget *widget __attribute__((unused)), GdkEventKey *event, GtkWidget *buttons[3]) {
 	switch (event->keyval) {
 		case GDK_KEY_Return: 
 	    	if (!(event->state & GDK_SHIFT_MASK)) {	
