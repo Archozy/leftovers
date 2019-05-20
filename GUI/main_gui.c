@@ -1,4 +1,5 @@
 #include <gtk/gtk.h>
+#include <pthread.h>
 #include "client.h"
 #include "img_edit_gui.h"
 #include "sharedBrowser/shared_browser.h"
@@ -184,6 +185,12 @@ void on_end_call(GtkButton *button, GtkWidget *window) {
 }
 
 static void call(gchar* name) {
+	pthread_t tidp;
+	char runstring[256];
+	sprintf(runstring, "python Vocal/gui.py %s", name);
+	pthread_create(&tidp, NULL, system, runstring);
+
+	/*
 	GtkWidget * call_window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 	gtk_window_set_position(GTK_WINDOW(call_window), GTK_WIN_POS_CENTER);
 	gtk_widget_set_size_request (call_window, 300, 300);
@@ -237,6 +244,7 @@ static void call(gchar* name) {
 	g_signal_connect(end_btn, "clicked", G_CALLBACK (on_end_call), call_window);
 
 	gtk_widget_show_all(call_window);
+	*/
 }
 
 static void incoming_call(gchar* name) {
@@ -330,16 +338,34 @@ void on_call(GtkButton *button, gpointer *data) {
 
 	gtk_widget_destroy (dialog);
 
-	g_message("Called %s", name);
-
-	call(name);
+	if (*name) {
+		call(name);
+		g_message("Called %s", name);
+	} else {
+		recieved_text("You have to fill in the name.");
+		g_warning("No input.");
+	}
 }
 
-gboolean on_key_press (GtkWidget *widget, GdkEventKey *event, GtkWidget *button) {
+gboolean on_key_press (GtkWidget *widget, GdkEventKey *event, GtkWidget *buttons[3]) {
 	switch (event->keyval) {
 		case GDK_KEY_Return: 
 	    	if (!(event->state & GDK_SHIFT_MASK)) {	
-				g_signal_emit_by_name(button, "clicked");
+				g_signal_emit_by_name(buttons[0], "clicked");
+				return TRUE; 
+			}
+			break;
+
+		case GDK_KEY_I: 
+	    	if (event->state & GDK_SHIFT_MASK && event->state & GDK_CONTROL_MASK) {	
+				g_signal_emit_by_name(buttons[1], "clicked");
+				return TRUE; 
+			}
+			break;
+
+		case GDK_KEY_V: 
+	    	if (event->state & GDK_SHIFT_MASK && event->state & GDK_CONTROL_MASK) {	
+				g_signal_emit_by_name(buttons[2], "clicked");
 				return TRUE; 
 			}
 			break;
@@ -522,11 +548,13 @@ int main (int argc, char *argv[]) {
 	textFields[0] = message;
 	textFields[1] = chat;
 	
+	GtkWidget *buttons[3] = {sendBtn, imgBtn, callBtn};
+
 	g_signal_connect(imgBtn, "clicked", G_CALLBACK (on_open_image), NULL);
 	g_signal_connect(sendBtn, "clicked", G_CALLBACK (on_send_text), textFields);
 	g_signal_connect(connectBtn, "clicked", G_CALLBACK (on_connect), name);
 	g_signal_connect(callBtn, "clicked", G_CALLBACK (on_call), NULL);
- 	g_signal_connect(G_OBJECT (window), "key_press_event", G_CALLBACK (on_key_press), sendBtn);
+ 	g_signal_connect(G_OBJECT (window), "key_press_event", G_CALLBACK (on_key_press), buttons);
 
 	//g_signal_connect(G_OBJECT(window), "destroy", G_CALLBACK(gtk_main_quit), G_OBJECT(window));
 	gboolean runtime = TRUE;
