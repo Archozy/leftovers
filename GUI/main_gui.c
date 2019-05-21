@@ -200,25 +200,18 @@ static void call(gchar* name) {
 	GtkWidget * call_window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 	gtk_window_set_position(GTK_WINDOW(call_window), GTK_WIN_POS_CENTER);
 	gtk_widget_set_size_request (call_window, 300, 300);
-
 	gtk_window_set_title(GTK_WINDOW(call_window), "Voice chat");
-
 	GtkWidget * mainBox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
-
 	GtkWidget * header = gtk_header_bar_new();
 	gchar name_text[150];
 	sprintf(name_text, "<big>%s</big>", name);
 	GtkWidget *name_label = gtk_label_new(name_text);
 	gtk_label_set_use_markup(GTK_LABEL(name_label), TRUE);
 	gtk_header_bar_set_custom_title(GTK_HEADER_BAR(header), name_label);
-
 	gtk_box_pack_start(GTK_BOX(mainBox), header, FALSE, FALSE, 0);
-
-
 	GtkWidget *grid = gtk_grid_new();
 	gtk_grid_set_column_spacing (GTK_GRID(grid), 50);
 	gtk_grid_set_row_spacing(GTK_GRID(grid), 200);
-
 	GtkWidget *box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
 	GtkWidget *volumeLabel = gtk_label_new("Volume:");
 	GtkWidget *volumeScale = gtk_scale_new_with_range(GTK_ORIENTATION_VERTICAL,
@@ -231,9 +224,7 @@ static void call(gchar* name) {
 	gtk_box_pack_start(GTK_BOX(box), volumeLabel, FALSE, FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(box), volumeScale, TRUE, TRUE, 0);
 	gtk_widget_set_vexpand (box, TRUE);
-
 	gtk_grid_attach(GTK_GRID(grid), box, 0, 0, 1, 2);
-
 	GtkWidget *status = gtk_label_new("Connection in progress...");
 	gtk_widget_set_hexpand (status, TRUE);
 	gtk_grid_attach(GTK_GRID(grid), status, 1, 0, 1, 1);
@@ -241,14 +232,11 @@ static void call(gchar* name) {
 	gtk_widget_set_halign(end_btn, GTK_ALIGN_END);
 	gtk_widget_set_vexpand (end_btn, FALSE);
 	gtk_grid_attach(GTK_GRID(grid), end_btn, 1, 1, 1, 1);
-
 	gtk_container_set_border_width(GTK_CONTAINER(grid), 20);
 	gtk_widget_set_valign(grid, GTK_ALIGN_START);
 	gtk_box_pack_start(GTK_BOX(mainBox), grid, FALSE, TRUE, 0);
 	gtk_container_add(GTK_CONTAINER(call_window), mainBox);
-
 	g_signal_connect(end_btn, "clicked", G_CALLBACK (on_end_call), call_window);
-
 	gtk_widget_show_all(call_window);
 	*/
 }

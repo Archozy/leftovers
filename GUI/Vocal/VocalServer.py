@@ -1,13 +1,23 @@
 import socket
 import select
-
+import pyaudio
+import wave
+import _thread
+import sys
+import gi
 
 class ChatServer:
     def __init__(self):
-
+		
+        so = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        so.connect(("8.8.8.8", 80))
+        adrs = so.getsockname()[0]
+        so.close()
+		
+		
         self.CONNECTION_LIST = []
         self.chat_server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.chat_server_socket.bind(("0.0.0.0", 50000))
+        self.chat_server_socket.bind((adrs, 50000))
         self.chat_server_socket.listen(5)
 
         self.CONNECTION_LIST.append(self.chat_server_socket)

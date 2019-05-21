@@ -22,6 +22,18 @@
 #include <arpa/inet.h>
 #include <string.h>
 #include <sys/select.h>
+#include <ifaddrs.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <string.h> /* For strncpy */
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/ioctl.h>
+#include <netinet/in.h>
+#include <net/if.h>
+#include <arpa/inet.h>
+
+
 #define MAX_BUF 1024
 int count = 0; 
 void analyse(){
@@ -193,6 +205,36 @@ int askList(int* sockfd){
 	}
 	return 0;
 }
+
+void getlocalip(char* ip){
+	struct ifaddrs * ifAddrStruct = NULL, * ifa = NULL;
+    void * tmpAddrPtr = NULL;
+
+    getifaddrs(&ifAddrStruct);
+    for (ifa = ifAddrStruct; ifa != NULL; ifa = ifa->ifa_next) {
+        if (ifa ->ifa_addr->sa_family == AF_INET) { // Check it is IPv4
+            char mask[INET_ADDRSTRLEN];
+            void* mask_ptr = &((struct sockaddr_in*) ifa->ifa_netmask)->sin_addr;
+            inet_ntop(AF_INET, mask_ptr, mask, INET_ADDRSTRLEN);
+            if (strcmp(mask, "255.0.0.0") != 0) {
+                printf("mask:%s\n", mask);
+                // Is a valid IPv4 Address
+                tmpAddrPtr = &((struct sockaddr_in *) ifa->ifa_addr)->sin_addr;
+                char addressBuffer[INET_ADDRSTRLEN];
+                inet_ntop(AF_INET, tmpAddrPtr, addressBuffer, INET_ADDRSTRLEN);
+                printf("%s IP Address %s\n", ifa->ifa_name, addressBuffer);
+                strcpy(ip, addressBuffer);
+            }
+            else if (ifa->ifa_addr->sa_family == AF_INET6) { // Check it is
+                // a valid IPv6 Address.
+
+                // Do something
+            }
+        }
+    }
+    if (ifAddrStruct != NULL)
+        freeifaddrs(ifAddrStruct);
+}
 void sentence(char* input, int* sockfd){
 	if(strncmp(input, "/", 1) == 0){
 		if(strncmp(input, "/help", 5) == 0 && strlen(input) == 6){
@@ -200,6 +242,13 @@ void sentence(char* input, int* sockfd){
 		}
 		if(strncmp(input, "/quit", 5) == 0){
 			exit(0);
+		}
+		if(strncmp(input, "/ip", 3) == 0){
+			char* k = calloc(15, sizeof(char));
+			
+			getlocalip(k);
+			printf("ip : --%s\n", k);
+			free(k);
 		}
 		if(strncmp(input, "/sendPic", 8) == 0){
 			char picname[20];
