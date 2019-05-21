@@ -205,7 +205,18 @@ int askList(int* sockfd){
 	}
 	return 0;
 }
-
+void sendCall(int* sockfd, char* dest){
+	char buffer[50];
+	memset(buffer, 0, 50);
+	strcat(buffer, "/7");
+	strcat(buffer, dest);
+	printf("%s\n", buffer);
+	int u = send(*sockfd, buffer, 50, 0);
+	if(u < 0){
+		printf("not connected to any Server please type </help connect>\n");
+		return -1;
+	}
+}
 void getlocalip(char* ip){
 	struct ifaddrs * ifAddrStruct = NULL, * ifa = NULL;
     void * tmpAddrPtr = NULL;
@@ -242,6 +253,15 @@ void sentence(char* input, int* sockfd){
 		}
 		if(strncmp(input, "/quit", 5) == 0){
 			exit(0);
+		}
+		if(strncmp(input, "/sendCall", 9) == 0){
+			char namedest[50];
+			memset(namedest, 0, 50);
+			for(int i = 10 ; input[i] != '\0' ; i++){
+				namedest[i -10] = input[i];
+			}
+			printf("Calling %s \n", namedest);
+			sendCall(sockfd, namedest);
 		}
 		if(strncmp(input, "/ip", 3) == 0){
 			char* k = calloc(15, sizeof(char));

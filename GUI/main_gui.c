@@ -193,8 +193,13 @@ void *thread_wrapper(void *args) {
 static void call(gchar* name) {
 	pthread_t tidp;
 	char *runstring = malloc(sizeof(char)*256);
-	sprintf(runstring, "python Vocal/gui.py \"%s\"", name);
+	char* ip = calloc(15, sizeof(char));
+	getlocalip(ip);
+	sprintf(runstring, "python Vocal/VocalClient.py %s %s", name, ip);
+	printf("request : %s\n", runstring);
+	sendCall(&sockfd, name);
 	pthread_create(&tidp, NULL, thread_wrapper, (void *)runstring);
+	free(ip);
 
 	/*
 	GtkWidget * call_window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
@@ -431,6 +436,10 @@ int MSG(){
 		gtk_text_buffer_get_end_iter(chatBuf, &e);
 		gtk_text_buffer_insert(chatBuf, &e, "------------------------------------------", -1);
 		gtk_text_buffer_insert(chatBuf, &e, "\n", 1);
+	}
+	if(rec[1] == '7'){
+		printf("Called\n");
+		incoming_call("Archoline");
 	}
 }
 
